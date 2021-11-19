@@ -1,3 +1,5 @@
+// 12191586 김하은 shell 구현 과제 main.c
+
 #include "smallsh.h"
 
 char *prompt = "Command> "; // 명령어 입력을 위해 띄워놓는 문장
