@@ -12,6 +12,8 @@ int userin(char* p) {
 	ptr = inpbuf;
 	tok = tokbuf;
 
+
+	p = strcat(getcwd(p, MAXBUF), "$ ");
 	printf("%s", p);
 	count = 0;
 
@@ -101,6 +103,12 @@ int runcommand(char **cline, int where, int narg) {
 	int index;
 	char* path = NULL;
 
+	struct sigaction act;
+	sigfillset(&(act.sa_mask));
+	act.sa_handler = SIG_DFL;
+	act.sa_flags = SA_RESTART | SA_NOCLDSTOP | SA_NOCLDWAIT;
+	sigaction(SIGCHLD, &act, NULL);
+
         for(int i=0; cline[i]!=NULL; i++){
 		if(!strcmp(cline[i], ">")){
 			index = i+1;
@@ -122,6 +130,13 @@ int runcommand(char **cline, int where, int narg) {
 				perror("smallsh");
 				return -1;
 			case 0:
+				if(where == FOREGROUND){
+					signal(SIGINT, SIG_DFL);
+				}
+				else{
+					signal(SIGINT, SIG_IGN);
+				}
+
 				if(path != NULL){
 				int fd = open(path, O_WRONLY|O_APPEND|O_CREAT, 0644);
 					dup2(fd, 1);
