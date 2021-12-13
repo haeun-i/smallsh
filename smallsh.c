@@ -12,9 +12,8 @@ int userin(char* p) {
 	ptr = inpbuf;
 	tok = tokbuf;
 
-
-	p = strcat(getcwd(p, MAXBUF), "$ "); // 경로 뒤에 '&'값 붙이기 위해 strcat 
-	printf("%s", p);
+	p = strcat(getcwd(p, MAXBUF), "$ "); // 경로 뒤에 '&'값 붙이기 위해 strcat 함수 사용
+	printf("%s", p); // 경로 출력
 	count = 0;
 
 	while(1) { 
