@@ -13,7 +13,7 @@ int userin(char* p) {
 	tok = tokbuf;
 
 
-	p = strcat(getcwd(p, MAXBUF), "$ ");
+	p = strcat(getcwd(p, MAXBUF), "$ "); // 경로 뒤에 '&'값 붙이기 위해 strcat 
 	printf("%s", p);
 	count = 0;
 
