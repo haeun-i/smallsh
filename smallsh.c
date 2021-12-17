@@ -51,7 +51,7 @@ int gettok(char** outptr) {
 		case ';':
 			type = SEMICOLON;
 			break;
-		case '|':
+		case '|': // pipe가 입력되었을 경우 타입을 PIPE로 지정
 			type = PIPE;
 			break;
 		default:
@@ -83,8 +83,8 @@ void procline() {
 		switch (toktype = gettok(&arg[narg])) {
 			case PIPE:
 			case ARG:
-				if (toktype == PIPE) checkpipe = 1;
-				if (narg < MAXARG)
+				if (toktype == PIPE) checkpipe = 1; // pipe가 입력되었음을 체크하고
+				if (narg < MAXARG) // 그 다음 문자들을 입력받는다
 					narg++;
 				break;
 			case EOL:
@@ -150,24 +150,24 @@ int runcommand(char **cline, int where, int narg, int checkpipe) {
 					sigaction(SIGINT, &act2, NULL);
 				}
 
-				if(checkpipe){
+				if(checkpipe){ // 파이프가 입력 되었을 경우
 					char* com1[10];
 					char* com2[10];
 					
-					for(int i=0; cline[i] != NULL; i++){
-						if(*cline[i] == '|') {
+					for(int i=0; cline[i] != NULL; i++){ // | 를 기준으로 명령어를 두 개의 배열로 나눈다.
+						if(*cline[i] == '|') {  // '|'의 index값을 찾는다.
 							int j=0;
-							for(; cline[i+1] != NULL; j++) {
+							for(; cline[i+1] != NULL; j++) { // index값 이후의 명령어 값들을 com2에 넣는다.
 								com2[j] = cline[i+1];
 								i++;
 							}
-							com2[j] = NULL;
+							com2[j] = NULL; // EOF
 						}
 
-						com1[i] = cline[i];
+						com1[i] = cline[i]; // '|'가 입력되기 전까지의 명령어 값은 com1에 저장된다.
 					}
 
-					join(com1, com2);
+					join(com1, com2); // com1의 STDOUT이 com2의 STDIN이 되도록 하는 함수
 					return 0;
 				}
 			
@@ -218,16 +218,16 @@ void join (char *com1[], char *com2[]) {
 		case -1:
 			fatal("2nd fork call in join");
 		case 0:
-			dup2(p[1],1);
+			dup2(p[1],1); // STDOUT의 내용을 쓰기 pipe로
 			close(p[0]);
 			close(p[1]);
-			execvp (com1[0], com1);
+			execvp (com1[0], com1); // 첫번째 명령어 시행
 			fatal("1st execvp call in join");
 		default:
-			dup2(p[0], 0);
+			dup2(p[0], 0); // pipe의 내용을 STDIN으로 받는다
 			close(p[0]);
 			close(p[1]);
-			execvp(com2[0], com2);
+			execvp(com2[0], com2); // 두 번째 명령어 시행
 			fatal("2nd execvp call in join");
 	}
 }
