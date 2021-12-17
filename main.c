@@ -1,7 +1,7 @@
 #include "smallsh.h"
 
 char *prompt; 
-char *prompt = "Command> "; // 기존 prompt 초기화 문자 삭제
+// char *prompt = "Command> "; 기존 prompt 초기화 문자 삭제
 
 
 int main() {
