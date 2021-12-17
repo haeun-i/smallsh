@@ -14,9 +14,8 @@ int userin(char* p) {
 	ptr = inpbuf;
 	tok = tokbuf;
 
-
-	p = strcat(getcwd(p, MAXBUF), "$ ");
-	printf("%s", p);
+	p = strcat(getcwd(p, MAXBUF), "$ "); // 경로 뒤에 '&'값 붙이기 위해 strcat 함수 사용
+	printf("%s", p); // 경로 출력
 	count = 0;
 
 	while(1) {
@@ -138,13 +137,13 @@ int runcommand(char **cline, int where, int narg, int checkpipe) {
 				perror("smallsh");
 				return -1;
 			case 0:
-				if(where == FOREGROUND){
+				if(where == FOREGROUND){ // foreground procee의 경우 SIGINT가 발생했을 때 종료
 					struct sigaction act2;
                 	                sigfillset(&(act2.sa_mask));
        					act2.sa_handler = SIG_DFL;
         				sigaction(SIGINT, &act2, NULL);
 				}
-				else{
+				else{ // background process의 경우 SIGINT가 발생해도 종료되지 않음
 					struct sigaction act2;
                         	        sigfillset(&(act2.sa_mask));
 					act2.sa_handler = SIG_IGN;
