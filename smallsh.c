@@ -5,9 +5,11 @@ static char tokbuf[2*MAXBUF];
 static char *ptr = inpbuf;
 static char *tok = tokbuf;
 
-static char special[] = {' ', '\t', '&', ';', '\n', '\0'}; // 특수문자 처리
+static char special[] = {' ', '\t', '&', ';', '\n', '\0'};
+void join(char* com1[], char* com2[]);
+int fatal(char* );
 
-int userin(char* p) {  
+int userin(char* p) { 
 	int c, count;
 	ptr = inpbuf;
 	tok = tokbuf;
@@ -17,13 +19,13 @@ int userin(char* p) {
 	printf("%s", p);
 	count = 0;
 
-	while(1) { 
+	while(1) {
 		if ((c = getchar()) == EOF)
 			return EOF;
-		if (count < MAXBUF) // 입력받은 글자를 inpbuf에 삽입한다.
+		if (count < MAXBUF)
 			inpbuf[count++] = c;
-		if (c == '\n' && count < MAXBUF) { 
-			inpbuf[count] = '\0'; // 줄바뀜 문자 입력되면 null문자 삽입
+		if (c == '\n' && count < MAXBUF) {
+			inpbuf[count] = '\0';
 			return count;
 		}
 		if (c == '\n' || count >= MAXBUF) {
@@ -50,6 +52,9 @@ int gettok(char** outptr) {
 		case ';':
 			type = SEMICOLON;
 			break;
+		case '|':
+			type = PIPE;
+			break;
 		default:
 			type = ARG;
 			while(inarg(*ptr))
@@ -73,22 +78,25 @@ void procline() {
 	char *arg[MAXARG + 1];
 	int toktype, type;
 	int narg = 0;
+	int checkpipe = 0;
 	
 	for (;;) {
 		switch (toktype = gettok(&arg[narg])) {
+			case PIPE:
 			case ARG:
+				if (toktype == PIPE) checkpipe = 1;
 				if (narg < MAXARG)
 					narg++;
 				break;
 			case EOL:
 			case SEMICOLON:
-			case AMPERSAND: 
+			case AMPERSAND:
 				if (toktype == AMPERSAND) type = BACKGROUND;
 				else type = FOREGROUND;
 				
 				if (narg != 0) {
 					arg[narg] = NULL;
-					runcommand(arg, type, narg); // runcommand에 argment의 수 까지 매개변수에 보내도록 변경
+					runcommand(arg, type, narg, checkpipe);
 				}
 				if (toktype == EOL) return;
 				narg = 0;
@@ -97,7 +105,7 @@ void procline() {
 	}
 }
 
-int runcommand(char **cline, int where, int narg) {
+int runcommand(char **cline, int where, int narg, int checkpipe) {
 	pid_t pid;
 	int status;
 	int index;
@@ -109,10 +117,10 @@ int runcommand(char **cline, int where, int narg) {
 	act.sa_flags = SA_RESTART | SA_NOCLDSTOP | SA_NOCLDWAIT;
 	sigaction(SIGCHLD, &act, NULL);
 
-        for(int i=0; cline[i]!=NULL; i++){ 
-		if(!strcmp(cline[i], ">")){ // > 가 입력된 경우 파일을 출력할 path의 정보부터 확인한다. 
-			index = i+1;  // >가 입력된 이후 다음의 argument가 path에 관한 정보이다.
-		       	path = cline[index]; 
+        for(int i=0; cline[i]!=NULL; i++){
+		if(!strcmp(cline[i], ">")){
+			index = i+1;
+		       	path = cline[index];
 		}
 	}
 
@@ -124,30 +132,54 @@ int runcommand(char **cline, int where, int narg) {
 		else
 			chdir(cline[1]);
 	}
-	else{ // cd, exit가 아닌 경우
+	else{
 		switch (pid = fork()) {
 			case -1:
 				perror("smallsh");
 				return -1;
 			case 0:
-
 				if(where == FOREGROUND){
-					signal(SIGINT, SIG_DFL);
+					struct sigaction act2;
+                	                sigfillset(&(act2.sa_mask));
+       					act2.sa_handler = SIG_DFL;
+        				sigaction(SIGINT, &act2, NULL);
 				}
 				else{
-					signal(SIGINT, SIG_IGN);
+					struct sigaction act2;
+                        	        sigfillset(&(act2.sa_mask));
+					act2.sa_handler = SIG_IGN;
+					sigaction(SIGINT, &act2, NULL);
 				}
 
-				if(path != NULL){ // '>'가 입력되었을 때만 path가 지정됨 -> path가 null이 아니면 > 명령이 아니므로 바로 프로그램을 실행한다.
-					int fd = open(path, O_WRONLY|O_APPEND|O_CREAT, 0644); // 명령어의 내용이 작성될 파일 open
-					dup2(fd, 1); // 결과값을 파일에 담는다.
+				if(checkpipe){
+					char* com1[10];
+					char* com2[10];
+					
+					for(int i=0; cline[i] != NULL; i++){
+						if(*cline[i] == '|') {
+							int j=0;
+							for(; cline[i+1] != NULL; j++) {
+								com2[j] = cline[i+1];
+								i++;
+							}
+							com2[j] = NULL;
+						}
 
+						com1[i] = cline[i];
+					}
+
+					join(com1, com2);
+					return 0;
+				}
+			
+					
+				if(path != NULL){
+				int fd = open(path, O_WRONLY|O_APPEND|O_CREAT, 0644);
+					dup2(fd, 1);
 					close(fd);
 
 					for(int i=index-1; cline[i]!=NULL; i++){
-						cline[i] = cline[i+2]; 
-						// '>'와 path 경로의 관한 정보를 배열의 뒷 부분을 앞으로 끌어서 가져옴으로써
-						// redirect 명령을 완전히 종료시키고 다른 명령을 받을 수 있게 한다.
+						cline[i] = cline[i+2];
 					}	
 					
 				}
@@ -167,4 +199,41 @@ int runcommand(char **cline, int where, int narg) {
 		return -1;
 	else
 		return status;
+}
+
+void join (char *com1[], char *com2[]) {
+	int p[2], status;
+
+	switch (fork()) {
+		case -1:
+			fatal("1st fork call in join");
+		case 0:
+			break;
+		default:
+			wait(&status);
+	}
+
+	if (pipe(p) == -1)
+		fatal("pipe call in join");
+	switch (fork()) {
+		case -1:
+			fatal("2nd fork call in join");
+		case 0:
+			dup2(p[1],1);
+			close(p[0]);
+			close(p[1]);
+			execvp (com1[0], com1);
+			fatal("1st execvp call in join");
+		default:
+			dup2(p[0], 0);
+			close(p[0]);
+			close(p[1]);
+			execvp(com2[0], com2);
+			fatal("2nd execvp call in join");
+	}
+}
+
+int fatal(char* s){
+	perror(s);
+	exit(1);
 }

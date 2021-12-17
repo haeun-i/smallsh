@@ -4,12 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <signal.h>
 
 #define	EOL	1
 #define	ARG	2
 #define	AMPERSAND	3
 #define	SEMICOLON	4
-
+#define PIPE	5
 
 #define MAXARG	512
 #define MAXBUF	512
@@ -21,4 +22,4 @@ int userin(char* p);
 void procline();
 int gettok(char** outptr);
 int inarg(char c);
-int runcommand(char **cline, int where, int narg);
+int runcommand(char **cline, int where, int narg, int checkpipe);

@@ -1,13 +1,15 @@
-// 12191586 김하은 shell 구현 과제 main.c
-
 #include "smallsh.h"
 
-char *prompt;
+char *prompt; 
 
 int main() {
 	
-	signal(SIGINT, SIG_IGN); // shell에서는 SIGINT 무시
-	while(userin(prompt) != EOF)  // EOF이 아니면
-		procline(); // procline 실행 (parsing해서 실제 응용프로그램 실행)
+	struct sigaction act;
+	sigfillset(&(act.sa_mask));
+	act.sa_handler = SIG_IGN;
+	sigaction(SIGINT, &act, NULL);
+	
+	while(userin(prompt) != EOF)
+		procline();
 	return 0;
 }
